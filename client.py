@@ -1,4 +1,5 @@
 import socket
+from prettytable import PrettyTable
 
 msg = ""
 

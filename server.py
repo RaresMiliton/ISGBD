@@ -1,6 +1,7 @@
 import socket
 import json
 import redis
+from prettytable import PrettyTable
 
 ip_address = "127.0.0.1"
 port = 9999
@@ -9,7 +10,7 @@ bufferSize = 1024
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 serverSocket.bind((ip_address, port))
 
-r = redis.Redis()
+r = redis.Redis('localhost', 6379)
 
 
 def open_file(json_file_name="Catalog.json"):
@@ -66,6 +67,12 @@ def compareType(attribute, value, length):
     else:
         return isinstance(attribute, bool)
 
+
+def findAttribute(el, attributes):
+    for i in range(len(attributes)):
+        if el == attributes[i]["attributeName"]:
+            return i
+    return -1
 
 def create(statement):
     data = open_file()
@@ -221,6 +228,10 @@ def drop(statement):
                 else:
                     del data["databases"][used_database]["tables"][statement[1]]
                     write_json(data)
+                    key = used_database+":"+statement[1]+":*"
+                    keys = r.keys(key)
+                    for k in keys:
+                        r.delete(k)
                     msg = "DROPPED TABLE {}".format(statement[1])
                     serverSocket.sendto(msg.encode(), address)
             else:
@@ -234,7 +245,7 @@ def drop(statement):
 def insert(statement):
     data = open_file()
     global used_database
-    if (statement[0] != "into") or (len(statement) < 3):
+    if (statement[0].lower() != "into") or (len(statement) < 3):
         serverSocket.sendto("INVALID INSERT COMMAND".encode(), address)
     else:
         if used_database:
@@ -245,15 +256,13 @@ def insert(statement):
                 value = ""
                 attributes = statement[2:]
                 attributes = parseAttributes(attributes)
-                str = ""
-                for attribute in attributes:
-                    str += attribute
-                attributes = str.split(" ")
                 if len(attributes) != data["databases"][used_database]["tables"][table_name]["rowLength"]:
                     serverSocket.sendto("THE NUMBER OF ATTRIBUTES DIFFER!".encode(), address)
                 else:
                     st = data["databases"][used_database]["tables"][table_name]["structure"]
                     for i in range(len(attributes)):
+                        if attributes[i][0] == " ":
+                            attributes[i] = attributes[i][1:]
                         if not compareType(attributes[i], st[i]["type"], st[i]["length"]):
                             serverSocket.sendto("ATTRIBUTE TYPES DO NOT MATCH!".encode(), address)
                             break
@@ -263,9 +272,11 @@ def insert(statement):
                             else:
                                 value += attributes[i] + "#"
                     value = value[:-1]
-                    print(key, value)
-                    r.set(key, value)
-                    serverSocket.sendto("DATA INSERTED INTO {}".format(table_name).encode(), address)
+                    if len(r.keys(key)) > 0:
+                        serverSocket.sendto("DATA WITH THAT PRIMARY KEY ALREADY EXISTS IN TABLE {}".format(table_name).encode(), address)
+                    else:
+                        r.set(key, value)
+                        serverSocket.sendto("DATA INSERTED INTO {}".format(table_name).encode(), address)
 
             else:
                 msg = "TABLE DOES NOT EXIST"
@@ -275,6 +286,61 @@ def insert(statement):
             serverSocket.sendto(msg.encode(), address)
 
 
+def delete(statement):
+    data = open_file()
+    global used_database
+    if (statement[0].lower() != "from") or (len(statement) < 2):
+        serverSocket.sendto("INVALID DELETE COMMAND".encode(), address)
+    else:
+        if used_database:
+            table = data["databases"][used_database]["tables"].get(statement[1], None)
+            if table:
+                table_name = statement[1]
+                keys = used_database + ":" + table_name + ":*"
+                table_data = r.keys(keys)
+                if len(statement) == 2:
+                    for t_data in table_data:
+                        r.delete(t_data)
+                    serverSocket.sendto("ALL DATA REMOVED FROM {}".format(table_name).encode(), address)
+                else:
+                    if statement[2].lower() != "where":
+                        serverSocket.sendto("INVALID DELETE COMMAND".encode(), address)
+                    else:
+                        statement = statement[3:]
+                        statement = list(filter('and'.__ne__, statement))
+                        attributes = data["databases"][used_database]["tables"][table_name]["structure"]
+                        attribute_list = []
+                        value_list = []
+                        value_index = []
+                        for st in statement:
+                            attPos = findAttribute(st.split('=')[0], attributes)
+                            if attPos == -1:
+                                serverSocket.sendto("ATTRIBUTE {} DOES NOT EXIST IN TABLE {}".format(st.split('=')[0], table_name).encode(), address)
+                                break
+                            else:
+                                attribute_list.append(st.split('=')[0])
+                                value_list.append(st.split('=')[1])
+                                value_index.append(attPos)
+                        print(value_index)
+                        for td in table_data:
+                            ok = 1
+                            td_values = td.decode().split(":")[2] + "#" + r.get(td).decode()
+                            td_values = td_values.split("#")
+                            print(td_values)
+                            for i in range(len(value_list)):
+                                if value_list[i] != td_values[value_index[i]]:
+                                    ok = 0
+                            if ok == 1:
+                                r.delete(td.decode())
+                        serverSocket.sendto("DATA DELETED FROM TABLE {}".format(table_name).encode(), address)
+
+            else:
+                msg = "TABLE DOES NOT EXIST"
+                serverSocket.sendto(msg.encode(), address)
+        else:
+            msg = "DATABASE DOES NOT EXIST"
+            serverSocket.sendto(msg.encode(), address)
+
 print("Server Up")
 
 while True:
@@ -282,7 +348,7 @@ while True:
 
     clientData = clientData.decode().split(" ")
 
-    if clientData[0].lower() in ["create", "drop", "use", "insert", "delete"]:
+    if clientData[0].lower() in ["create", "drop", "use", "insert", "delete", "select"]:
         func = locals()[clientData[0].lower()]
         del clientData[0]
         func(clientData)
