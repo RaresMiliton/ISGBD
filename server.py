@@ -341,6 +341,35 @@ def delete(statement):
             msg = "DATABASE DOES NOT EXIST"
             serverSocket.sendto(msg.encode(), address)
 
+
+def select(statement):
+    data = open_file()
+    global used_database
+    if (statement[0].lower() != "*") or (statement[1].lower() != "from"):
+        serverSocket.sendto("INVALID SELECT COMMAND".encode(), address)
+    else:
+        if used_database:
+            table = data["databases"][used_database]["tables"].get(statement[2], None)
+            if table:
+                attributes = []
+                for str in data["databases"][used_database]["tables"][statement[2]]["structure"]:
+                    attributes.append(str["attributeName"])
+                t = PrettyTable(attributes)
+                for key in r.keys(used_database+':'+statement[2]+':*'):
+                    values = []
+                    values.append(key.decode().split(':')[2])
+                    values += r.get(key).decode().split('#')
+                    t.add_row(values)
+                print(t)
+                serverSocket.sendto(t.get_string().encode(), address)
+            else:
+                msg = "TABLE DOES NOT EXIST"
+                serverSocket.sendto(msg.encode(), address)
+        else:
+            msg = "DATABASE DOES NOT EXIST"
+            serverSocket.sendto(msg.encode(), address)
+
+
 print("Server Up")
 
 while True:

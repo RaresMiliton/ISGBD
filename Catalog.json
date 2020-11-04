@@ -2,7 +2,57 @@
     "databases": {
         "d1": {
             "name": "d1",
-            "tables": {}
+            "tables": {
+                "t1": {
+                    "tableName": "t1",
+                    "fileName": "t1.bin",
+                    "rowLength": 3,
+                    "structure": [
+                        {
+                            "attributeName": "studid",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "0"
+                        },
+                        {
+                            "attributeName": "name",
+                            "type": "varchar",
+                            "length": "3",
+                            "isNull": "1"
+                        },
+                        {
+                            "attributeName": "surname",
+                            "type": "varchar",
+                            "length": "12",
+                            "isNull": "1"
+                        }
+                    ],
+                    "primaryKey": [
+                        {
+                            "attributeName": "studid"
+                        }
+                    ],
+                    "foreignKeys": [],
+                    "uniqueKeys": [
+                        {
+                            "attributeName": "studid"
+                        }
+                    ],
+                    "indexFiles": [
+                        {
+                            "indexName": "t1Index",
+                            "keyLength": 2,
+                            "isUnique": "1",
+                            "indexType": "BTree",
+                            "indexAttributes": [
+                                {
+                                    "attributeName": "studid"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
         },
         "d2": {
             "name": "d2",
