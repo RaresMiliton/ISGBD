@@ -1,5 +1,184 @@
 {
     "databases": {
+        "d2": {
+            "name": "d2",
+            "tables": {
+                "tf": {
+                    "tableName": "tf",
+                    "fileName": "tf.bin",
+                    "rowLength": 2,
+                    "structure": [
+                        {
+                            "attributeName": "id",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "0"
+                        },
+                        {
+                            "attributeName": "ceva",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "1"
+                        }
+                    ],
+                    "primaryKey": [
+                        {
+                            "attributeName": "id"
+                        }
+                    ],
+                    "foreignKeys": [],
+                    "uniqueKeys": [
+                        {
+                            "attributeName": "id"
+                        }
+                    ],
+                    "indexFiles": [
+                        {
+                            "indexName": "tfIndex",
+                            "keyLength": 2,
+                            "isUnique": "1",
+                            "indexType": "BTree",
+                            "indexAttributes": [
+                                {
+                                    "attributeName": "id"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "tf2": {
+                    "tableName": "tf2",
+                    "fileName": "tf2.bin",
+                    "rowLength": 2,
+                    "structure": [
+                        {
+                            "attributeName": "a",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "0"
+                        },
+                        {
+                            "attributeName": "d",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "1"
+                        }
+                    ],
+                    "primaryKey": [
+                        {
+                            "attributeName": "a"
+                        }
+                    ],
+                    "foreignKeys": [
+                        {
+                            "foreignKey": "d",
+                            "refTable": "tf",
+                            "refAttribute": "ceva"
+                        }
+                    ],
+                    "uniqueKeys": [
+                        {
+                            "attributeName": "a"
+                        }
+                    ],
+                    "indexFiles": [
+                        {
+                            "indexName": "tf2Index",
+                            "keyLength": 3,
+                            "isUnique": "1",
+                            "indexType": "BTree",
+                            "indexAttributes": [
+                                {
+                                    "attributeName": "a"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        "d3": {
+            "name": "d3",
+            "tables": {
+                "tf": {
+                    "tableName": "tf",
+                    "fileName": "tf.bin",
+                    "rowLength": 3,
+                    "structure": [
+                        {
+                            "attributeName": "id",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "0"
+                        },
+                        {
+                            "attributeName": "un",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "1"
+                        },
+                        {
+                            "attributeName": "alt",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "1"
+                        }
+                    ],
+                    "primaryKey": [
+                        {
+                            "attributeName": "id"
+                        }
+                    ],
+                    "foreignKeys": [],
+                    "uniqueKeys": [
+                        {
+                            "attributeName": "id"
+                        },
+                        {
+                            "attributeName": "alt"
+                        }
+                    ],
+                    "indexFiles": []
+                },
+                "tf2": {
+                    "tableName": "tf2",
+                    "fileName": "tf2.bin",
+                    "rowLength": 2,
+                    "structure": [
+                        {
+                            "attributeName": "a",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "0"
+                        },
+                        {
+                            "attributeName": "fK",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "1"
+                        }
+                    ],
+                    "primaryKey": [
+                        {
+                            "attributeName": "a"
+                        }
+                    ],
+                    "foreignKeys": [
+                        {
+                            "foreignKey": "fK",
+                            "refTable": "tf",
+                            "refAttribute": "id"
+                        }
+                    ],
+                    "uniqueKeys": [
+                        {
+                            "attributeName": "a"
+                        }
+                    ],
+                    "indexFiles": []
+                }
+            }
+        },
         "d1": {
             "name": "d1",
             "tables": {
@@ -38,25 +217,9 @@
                             "attributeName": "studid"
                         }
                     ],
-                    "indexFiles": [
-                        {
-                            "indexName": "t1Index",
-                            "keyLength": 2,
-                            "isUnique": "1",
-                            "indexType": "BTree",
-                            "indexAttributes": [
-                                {
-                                    "attributeName": "studid"
-                                }
-                            ]
-                        }
-                    ]
+                    "indexFiles": []
                 }
             }
-        },
-        "d2": {
-            "name": "d2",
-            "tables": {}
         }
     }
 }

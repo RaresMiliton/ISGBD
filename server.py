@@ -2,6 +2,8 @@ import socket
 import json
 import redis
 from prettytable import PrettyTable
+import os
+import shutil
 
 ip_address = "127.0.0.1"
 port = 9999
@@ -81,6 +83,7 @@ def create(statement):
             data = {"databases": {}}
         data["databases"][statement[1]] = ({"name": statement[1], "tables": {}})
         write_json(data)
+        os.makedirs("databases/" + statement[1] + "/tables")
         msg = "CREATED DATABASE {}".format(statement[1])
         serverSocket.sendto(msg.encode(), address)
 
@@ -97,6 +100,7 @@ def create(statement):
             attributesNames = []
             foreignKeys = []
             foundIndexes = 0
+            uniqueA = ""
             for attribute in attributes:
                 isNull = '1'
                 attribute = attribute.split(' ')
@@ -105,10 +109,12 @@ def create(statement):
                 if "primary" in attribute:  # check for any primary key
                     primaryKey.append({"attributeName": attribute[0]})
                     uniqueKeys.append({"attributeName": attribute[0]})
-                    indexAttributes.append({"attributeName": attribute[0]})
-                    foundIndexes = 1
+                    uniqueA += attribute[0] + "#"
+                    #indexAttributes.append({"attributeName": attribute[0]})
+                    #foundIndexes = 1
                     isNull = '0'
                 if "unique" in attribute:  # check for any unique key
+                    uniqueA += attribute[0] + "#"
                     uniqueKeys.append({"attributeName": attribute[0]})
                 if "not" in attribute:  # check if attribute value is not null
                     isNull = '0'
@@ -149,6 +155,36 @@ def create(statement):
                      "indexFiles": indexFiles}
             data["databases"][used_database]["tables"][tableName] = table
             write_json(data)
+            os.mkdir("databases/" + used_database + "/tables/" + tableName)
+            f = open(
+                "databases/" + used_database + "/tables/" + tableName + "/" + tableName + ".kv",
+                "w+")
+            f.write("key: " + primaryKey[0]["attributeName"] + "\n")
+            strA = ""
+            for attribute in attributes:
+                attribute = attribute.split(' ')
+                if attribute[0] == "":
+                    attribute = attribute[1:]
+                if attribute[0] != primaryKey[0]["attributeName"]:
+                    strA += attribute[0] + "#"
+            strA = strA[:-1]
+            f.write("value: " + strA)
+            f.close()
+            if uniqueA != "":
+                uniqueA = uniqueA[:-1]
+                f = open(
+                    "databases/" + used_database + "/tables/" + tableName + "/" + "unique" + ".kv",
+                    "w+")
+                f.write("key: " + uniqueA + '\n')
+                f.write("value: " + primaryKey[0]["attributeName"])
+                f.close()
+            if len(foreignKeys) > 0:
+                f = open(
+                    "databases/" + used_database + "/tables/" + tableName + "/" + "foreign" + ".kv",
+                    "w+")
+                f.write("key: " + foreignKeys[0]["foreignKey"] + '\n')
+                f.write("value: " + foreignKeys[0]["refTable"] + '#' + foreignKeys[0]["refAttribute"])
+                f.close()
             msg = "CREATED TABLE {}".format(tableName)
             serverSocket.sendto(msg.encode(), address)
         else:
@@ -232,6 +268,7 @@ def drop(statement):
                     keys = r.keys(key)
                     for k in keys:
                         r.delete(k)
+                    shutil.rmtree("databases/" + used_database + "/tables/" + statement[1])
                     msg = "DROPPED TABLE {}".format(statement[1])
                     serverSocket.sendto(msg.encode(), address)
             else:
@@ -256,6 +293,7 @@ def insert(statement):
                 value = ""
                 attributes = statement[2:]
                 attributes = parseAttributes(attributes)
+                no = 0
                 if len(attributes) != data["databases"][used_database]["tables"][table_name]["rowLength"]:
                     serverSocket.sendto("THE NUMBER OF ATTRIBUTES DIFFER!".encode(), address)
                 else:
@@ -272,11 +310,24 @@ def insert(statement):
                             else:
                                 value += attributes[i] + "#"
                     value = value[:-1]
+                    fk = data["databases"][used_database]["tables"][table_name]["foreignKeys"][0]
+                    if len(fk) > 0:
+                        fKey = used_database + ":" + fk["refTable"] + ":"
+                        for i in range(len(attributes)):
+                            if attributes[i][0] == " ":
+                                attributes[i] = attributes[i][1:]
+                            if st[i]["attributeName"] == fk["foreignKey"]:
+                                fKey += attributes[i]
+                                #print(fKey)
+                                if len(r.keys(fKey)) == 0:
+                                    serverSocket.sendto("FOREIGN KEY {} DOES NOT EXIST IN TABLE {}".format(attributes[i],fk["refTable"]).encode(), address)
+                                    no = 1
                     if len(r.keys(key)) > 0:
                         serverSocket.sendto("DATA WITH THAT PRIMARY KEY ALREADY EXISTS IN TABLE {}".format(table_name).encode(), address)
                     else:
-                        r.set(key, value)
-                        serverSocket.sendto("DATA INSERTED INTO {}".format(table_name).encode(), address)
+                        if no == 0:
+                            r.set(key, value)
+                            serverSocket.sendto("DATA INSERTED INTO {}".format(table_name).encode(), address)
 
             else:
                 msg = "TABLE DOES NOT EXIST"
@@ -360,7 +411,6 @@ def select(statement):
                     values.append(key.decode().split(':')[2])
                     values += r.get(key).decode().split('#')
                     t.add_row(values)
-                print(t)
                 serverSocket.sendto(t.get_string().encode(), address)
             else:
                 msg = "TABLE DOES NOT EXIST"
