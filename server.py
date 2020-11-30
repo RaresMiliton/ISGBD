@@ -310,18 +310,18 @@ def insert(statement):
                             else:
                                 value += attributes[i] + "#"
                     value = value[:-1]
-                    fk = data["databases"][used_database]["tables"][table_name]["foreignKeys"][0]
-                    if len(fk) > 0:
-                        fKey = used_database + ":" + fk["refTable"] + ":"
-                        for i in range(len(attributes)):
-                            if attributes[i][0] == " ":
-                                attributes[i] = attributes[i][1:]
-                            if st[i]["attributeName"] == fk["foreignKey"]:
-                                fKey += attributes[i]
-                                #print(fKey)
-                                if len(r.keys(fKey)) == 0:
-                                    serverSocket.sendto("FOREIGN KEY {} DOES NOT EXIST IN TABLE {}".format(attributes[i],fk["refTable"]).encode(), address)
-                                    no = 1
+                    if len(data["databases"][used_database]["tables"][table_name]["foreignKeys"]) > 0:
+                        fk = data["databases"][used_database]["tables"][table_name]["foreignKeys"][0]
+                        if len(fk) > 0:
+                            fKey = used_database + ":" + fk["refTable"] + ":"
+                            for i in range(len(attributes)):
+                                if attributes[i][0] == " ":
+                                    attributes[i] = attributes[i][1:]
+                                if st[i]["attributeName"] == fk["foreignKey"]:
+                                    fKey += attributes[i]
+                                    if len(r.keys(fKey)) == 0:
+                                        serverSocket.sendto("FOREIGN KEY {} DOES NOT EXIST IN TABLE {}".format(attributes[i],fk["refTable"]).encode(), address)
+                                        no = 1
                     if len(r.keys(key)) > 0:
                         serverSocket.sendto("DATA WITH THAT PRIMARY KEY ALREADY EXISTS IN TABLE {}".format(table_name).encode(), address)
                     else:
