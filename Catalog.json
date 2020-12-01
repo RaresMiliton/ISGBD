@@ -1,11 +1,97 @@
 {
     "databases": {
-        "d2": {
-            "name": "d2",
+        "d1": {
+            "name": "d1",
             "tables": {
-                "tf": {
-                    "tableName": "tf",
-                    "fileName": "tf.bin",
+                "Grupa": {
+                    "tableName": "Grupa",
+                    "fileName": "Grupa.bin",
+                    "rowLength": 3,
+                    "structure": [
+                        {
+                            "attributeName": "GroupID",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "0"
+                        },
+                        {
+                            "attributeName": "Specialization",
+                            "type": "varchar",
+                            "length": "50",
+                            "isNull": "1"
+                        },
+                        {
+                            "attributeName": "Language",
+                            "type": "varchar",
+                            "length": "50",
+                            "isNull": "1"
+                        }
+                    ],
+                    "primaryKey": [
+                        {
+                            "attributeName": "GroupID"
+                        }
+                    ],
+                    "foreignKeys": [],
+                    "uniqueKeys": [
+                        {
+                            "attributeName": "GroupID"
+                        }
+                    ],
+                    "indexFiles": []
+                },
+                "Student": {
+                    "tableName": "Student",
+                    "fileName": "Student.bin",
+                    "rowLength": 4,
+                    "structure": [
+                        {
+                            "attributeName": "StudID",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "0"
+                        },
+                        {
+                            "attributeName": "GroupID",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "1"
+                        },
+                        {
+                            "attributeName": "Nume",
+                            "type": "varchar",
+                            "length": "50",
+                            "isNull": "1"
+                        },
+                        {
+                            "attributeName": "Prenume",
+                            "type": "varchar",
+                            "length": "50",
+                            "isNull": "1"
+                        }
+                    ],
+                    "primaryKey": [
+                        {
+                            "attributeName": "StudID"
+                        }
+                    ],
+                    "foreignKeys": [
+                        {
+                            "foreignKey": "GroupID",
+                            "refTable": "Grupa",
+                            "refAttribute": "GroupID"
+                        }
+                    ],
+                    "uniqueKeys": [
+                        {
+                            "attributeName": "StudID"
+                        }
+                    ],
+                    "indexFiles": []
+                },
+                "t1": {
+                    "tableName": "t1",
+                    "fileName": "t1.bin",
                     "rowLength": 2,
                     "structure": [
                         {
@@ -30,191 +116,9 @@
                     "uniqueKeys": [
                         {
                             "attributeName": "id"
-                        }
-                    ],
-                    "indexFiles": [
-                        {
-                            "indexName": "tfIndex",
-                            "keyLength": 2,
-                            "isUnique": "1",
-                            "indexType": "BTree",
-                            "indexAttributes": [
-                                {
-                                    "attributeName": "id"
-                                }
-                            ]
-                        }
-                    ]
-                },
-                "tf2": {
-                    "tableName": "tf2",
-                    "fileName": "tf2.bin",
-                    "rowLength": 2,
-                    "structure": [
-                        {
-                            "attributeName": "a",
-                            "type": "int",
-                            "length": "4",
-                            "isNull": "0"
                         },
                         {
-                            "attributeName": "d",
-                            "type": "int",
-                            "length": "4",
-                            "isNull": "1"
-                        }
-                    ],
-                    "primaryKey": [
-                        {
-                            "attributeName": "a"
-                        }
-                    ],
-                    "foreignKeys": [
-                        {
-                            "foreignKey": "d",
-                            "refTable": "tf",
-                            "refAttribute": "ceva"
-                        }
-                    ],
-                    "uniqueKeys": [
-                        {
-                            "attributeName": "a"
-                        }
-                    ],
-                    "indexFiles": [
-                        {
-                            "indexName": "tf2Index",
-                            "keyLength": 3,
-                            "isUnique": "1",
-                            "indexType": "BTree",
-                            "indexAttributes": [
-                                {
-                                    "attributeName": "a"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }
-        },
-        "d3": {
-            "name": "d3",
-            "tables": {
-                "tf": {
-                    "tableName": "tf",
-                    "fileName": "tf.bin",
-                    "rowLength": 3,
-                    "structure": [
-                        {
-                            "attributeName": "id",
-                            "type": "int",
-                            "length": "4",
-                            "isNull": "0"
-                        },
-                        {
-                            "attributeName": "un",
-                            "type": "int",
-                            "length": "4",
-                            "isNull": "1"
-                        },
-                        {
-                            "attributeName": "alt",
-                            "type": "int",
-                            "length": "4",
-                            "isNull": "1"
-                        }
-                    ],
-                    "primaryKey": [
-                        {
-                            "attributeName": "id"
-                        }
-                    ],
-                    "foreignKeys": [],
-                    "uniqueKeys": [
-                        {
-                            "attributeName": "id"
-                        },
-                        {
-                            "attributeName": "alt"
-                        }
-                    ],
-                    "indexFiles": []
-                },
-                "tf2": {
-                    "tableName": "tf2",
-                    "fileName": "tf2.bin",
-                    "rowLength": 2,
-                    "structure": [
-                        {
-                            "attributeName": "a",
-                            "type": "int",
-                            "length": "4",
-                            "isNull": "0"
-                        },
-                        {
-                            "attributeName": "fK",
-                            "type": "int",
-                            "length": "4",
-                            "isNull": "1"
-                        }
-                    ],
-                    "primaryKey": [
-                        {
-                            "attributeName": "a"
-                        }
-                    ],
-                    "foreignKeys": [
-                        {
-                            "foreignKey": "fK",
-                            "refTable": "tf",
-                            "refAttribute": "id"
-                        }
-                    ],
-                    "uniqueKeys": [
-                        {
-                            "attributeName": "a"
-                        }
-                    ],
-                    "indexFiles": []
-                }
-            }
-        },
-        "d1": {
-            "name": "d1",
-            "tables": {
-                "t1": {
-                    "tableName": "t1",
-                    "fileName": "t1.bin",
-                    "rowLength": 3,
-                    "structure": [
-                        {
-                            "attributeName": "studid",
-                            "type": "int",
-                            "length": "4",
-                            "isNull": "0"
-                        },
-                        {
-                            "attributeName": "name",
-                            "type": "varchar",
-                            "length": "3",
-                            "isNull": "1"
-                        },
-                        {
-                            "attributeName": "surname",
-                            "type": "varchar",
-                            "length": "12",
-                            "isNull": "1"
-                        }
-                    ],
-                    "primaryKey": [
-                        {
-                            "attributeName": "studid"
-                        }
-                    ],
-                    "foreignKeys": [],
-                    "uniqueKeys": [
-                        {
-                            "attributeName": "studid"
+                            "attributeName": "ceva"
                         }
                     ],
                     "indexFiles": []

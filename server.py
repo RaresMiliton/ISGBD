@@ -76,6 +76,7 @@ def findAttribute(el, attributes):
             return i
     return -1
 
+
 def create(statement):
     data = open_file()
     if statement[0].lower() == "database":
@@ -156,35 +157,6 @@ def create(statement):
             data["databases"][used_database]["tables"][tableName] = table
             write_json(data)
             os.mkdir("databases/" + used_database + "/tables/" + tableName)
-            f = open(
-                "databases/" + used_database + "/tables/" + tableName + "/" + tableName + ".kv",
-                "w+")
-            f.write("key: " + primaryKey[0]["attributeName"] + "\n")
-            strA = ""
-            for attribute in attributes:
-                attribute = attribute.split(' ')
-                if attribute[0] == "":
-                    attribute = attribute[1:]
-                if attribute[0] != primaryKey[0]["attributeName"]:
-                    strA += attribute[0] + "#"
-            strA = strA[:-1]
-            f.write("value: " + strA)
-            f.close()
-            if uniqueA != "":
-                uniqueA = uniqueA[:-1]
-                f = open(
-                    "databases/" + used_database + "/tables/" + tableName + "/" + "unique" + ".kv",
-                    "w+")
-                f.write("key: " + uniqueA + '\n')
-                f.write("value: " + primaryKey[0]["attributeName"])
-                f.close()
-            if len(foreignKeys) > 0:
-                f = open(
-                    "databases/" + used_database + "/tables/" + tableName + "/" + "foreign" + ".kv",
-                    "w+")
-                f.write("key: " + foreignKeys[0]["foreignKey"] + '\n')
-                f.write("value: " + foreignKeys[0]["refTable"] + '#' + foreignKeys[0]["refAttribute"])
-                f.close()
             msg = "CREATED TABLE {}".format(tableName)
             serverSocket.sendto(msg.encode(), address)
         else:
@@ -237,8 +209,15 @@ def drop(statement):
         db_data = data["databases"].get(statement[1], None)
         if db_data:
             db = statement[1]
+            tables = data["databases"][db]["tables"]
+            for table in tables:
+                key = used_database + ":" + data["databases"][db]["tables"][table]["tableName"] + ":*"
+                keys = r.keys(key)
+                for k in keys:
+                    r.delete(k)
             del data["databases"][db]
             write_json(data)
+            shutil.rmtree("databases/" + db)
             msg = "DROPPED DATABASE {}".format(db)
             serverSocket.sendto(msg.encode(), address)
             if used_database == db:
@@ -294,6 +273,7 @@ def insert(statement):
                 attributes = statement[2:]
                 attributes = parseAttributes(attributes)
                 no = 0
+                ok = 0
                 if len(attributes) != data["databases"][used_database]["tables"][table_name]["rowLength"]:
                     serverSocket.sendto("THE NUMBER OF ATTRIBUTES DIFFER!".encode(), address)
                 else:
@@ -310,22 +290,51 @@ def insert(statement):
                             else:
                                 value += attributes[i] + "#"
                     value = value[:-1]
-                    if len(data["databases"][used_database]["tables"][table_name]["foreignKeys"]) > 0:
-                        fk = data["databases"][used_database]["tables"][table_name]["foreignKeys"][0]
-                        if len(fk) > 0:
-                            fKey = used_database + ":" + fk["refTable"] + ":"
-                            for i in range(len(attributes)):
-                                if attributes[i][0] == " ":
-                                    attributes[i] = attributes[i][1:]
-                                if st[i]["attributeName"] == fk["foreignKey"]:
-                                    fKey += attributes[i]
-                                    if len(r.keys(fKey)) == 0:
-                                        serverSocket.sendto("FOREIGN KEY {} DOES NOT EXIST IN TABLE {}".format(attributes[i],fk["refTable"]).encode(), address)
-                                        no = 1
                     if len(r.keys(key)) > 0:
                         serverSocket.sendto("DATA WITH THAT PRIMARY KEY ALREADY EXISTS IN TABLE {}".format(table_name).encode(), address)
                     else:
-                        if no == 0:
+                        if len(data["databases"][used_database]["tables"][table_name]["foreignKeys"]) > 0:
+                            fk = data["databases"][used_database]["tables"][table_name]["foreignKeys"][0]
+                            if len(fk) > 0:
+                                fKey = used_database + ":" + fk["refTable"] + ":"
+                                for i in range(len(attributes)):
+                                    if attributes[i][0] == " ":
+                                        attributes[i] = attributes[i][1:]
+                                    if st[i]["attributeName"] == fk["foreignKey"]:
+                                        fKey += attributes[i]
+                                        if len(r.keys(fKey)) == 0:
+                                            serverSocket.sendto("FOREIGN KEY {} DOES NOT EXIST IN TABLE {}".format(attributes[i],fk["refTable"]).encode(), address)
+                                            no = 1
+                                if no != 1:
+                                    f = open("databases/" + used_database + "/tables/" + table_name + "/" + "foreignKey" + ".kv","w+")
+                                    f.write("key: " + fKey.split(':')[-1] + '\n')
+                                    f.write("value: " + fk["refTable"])
+                                    f.close()
+                        if len(data["databases"][used_database]["tables"][table_name]["uniqueKeys"]) > 1:
+                            uk = data["databases"][used_database]["tables"][table_name]["uniqueKeys"][1]
+                            if len(uk) > 0:
+                                uKey = ""
+                                for i in range(len(attributes)):
+                                    if attributes[i][0] == " ":
+                                        attributes[i] = attributes[i][1:]
+                                    if st[i]["attributeName"] == uk["attributeName"]:
+                                        f = open("databases/" + used_database + "/tables/" + table_name + "/" + "uniqueKey" + ".kv","a+")
+                                        ok = 0
+                                        f.seek(0)
+                                        lines = f.readlines()
+                                        for j in range(len(lines)):
+                                            if lines[j].split(' ')[1][:-1] == attributes[i]:
+                                                serverSocket.sendto("UNIQUE KEY CONSTRAINT VIOLATED IN TABLE {}".format(table_name).encode(), address)
+                                                ok = 1
+                                        if ok == 0:
+                                            uKey += attributes[i]
+                                        f.close()
+                                if uKey != "":
+                                    f = open("databases/" + used_database + "/tables/" + table_name + "/" + "uniqueKey" + ".kv","a+")
+                                    f.write("key: " + uKey + '\n')
+                                    f.write("value: " + key.split(':')[-1] + '\n')
+                                    f.close()
+                        if no == 0 and ok == 0:
                             r.set(key, value)
                             serverSocket.sendto("DATA INSERTED INTO {}".format(table_name).encode(), address)
 
@@ -372,18 +381,38 @@ def delete(statement):
                                 attribute_list.append(st.split('=')[0])
                                 value_list.append(st.split('=')[1])
                                 value_index.append(attPos)
-                        print(value_index)
-                        for td in table_data:
-                            ok = 1
-                            td_values = td.decode().split(":")[2] + "#" + r.get(td).decode()
-                            td_values = td_values.split("#")
-                            print(td_values)
-                            for i in range(len(value_list)):
-                                if value_list[i] != td_values[value_index[i]]:
-                                    ok = 0
-                            if ok == 1:
-                                r.delete(td.decode())
-                        serverSocket.sendto("DATA DELETED FROM TABLE {}".format(table_name).encode(), address)
+                        #print(value_index)
+                        tables = data["databases"][used_database]["tables"]
+                        cantdelete = 0
+                        for auxTable in tables:
+                            foreignKeys = data["databases"][used_database]["tables"][auxTable]["foreignKeys"]
+                            for fk in foreignKeys:
+                                if fk["refTable"] == table_name:
+                                    valueOfAttribute = ''
+                                    for i in range(len(attribute_list)):
+                                        if attribute_list[i] == fk["refAttribute"]:
+                                            valueOfAttribute = value_list[i]
+                                            break
+                                    f = open("databases/" + used_database + "/tables/" + auxTable + "/" + "foreignKey" + ".kv","r+")
+                                    lines = f.readlines()
+                                    for j in range(len(lines)):
+                                        if lines[j].split(' ')[1] == table_name :
+                                            if lines[j-1].split(' ')[1][:-1] == valueOfAttribute :
+                                                serverSocket.sendto("CAN'T DELETE ROW FROM TABLE {} - foreign key constraint".format(table_name).encode(), address)
+                                                cantdelete = 1
+                                    f.close()
+                        if cantdelete != 1:
+                            for td in table_data:
+                                ok = 1
+                                td_values = td.decode().split(":")[2] + "#" + r.get(td).decode()
+                                td_values = td_values.split("#")
+                                #print(td_values)
+                                for i in range(len(value_list)):
+                                    if value_list[i] != td_values[value_index[i]]:
+                                        ok = 0
+                                if ok == 1:
+                                    r.delete(td.decode())
+                            serverSocket.sendto("DATA DELETED FROM TABLE {}".format(table_name).encode(), address)
 
             else:
                 msg = "TABLE DOES NOT EXIST"
