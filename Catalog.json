@@ -124,6 +124,80 @@
                     "indexFiles": []
                 }
             }
+        },
+        "d2": {
+            "name": "d2",
+            "tables": {
+                "Zboruri": {
+                    "tableName": "Zboruri",
+                    "fileName": "Zboruri.bin",
+                    "rowLength": 4,
+                    "structure": [
+                        {
+                            "attributeName": "cod",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "0"
+                        },
+                        {
+                            "attributeName": "companie",
+                            "type": "varchar",
+                            "length": "50",
+                            "isNull": "1"
+                        },
+                        {
+                            "attributeName": "plecare",
+                            "type": "varchar",
+                            "length": "50",
+                            "isNull": "1"
+                        },
+                        {
+                            "attributeName": "destinatie",
+                            "type": "varchar",
+                            "length": "50",
+                            "isNull": "1"
+                        }
+                    ],
+                    "primaryKey": [
+                        {
+                            "attributeName": "cod"
+                        }
+                    ],
+                    "foreignKeys": [],
+                    "uniqueKeys": [
+                        {
+                            "attributeName": "cod"
+                        }
+                    ],
+                    "indexFiles": [
+                        {
+                            "indexName": "i1Index",
+                            "keyLength": 2,
+                            "isUnique": "1",
+                            "indexType": "BTree",
+                            "indexAttributes": [
+                                {
+                                    "attributeName": "plecare"
+                                },
+                                {
+                                    "attributeName": "destinatie"
+                                }
+                            ]
+                        },
+                        {
+                            "indexName": "i2Index",
+                            "keyLength": 2,
+                            "isUnique": "1",
+                            "indexType": "BTree",
+                            "indexAttributes": [
+                                {
+                                    "attributeName": "companie"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
         }
     }
 }

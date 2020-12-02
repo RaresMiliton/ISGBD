@@ -14,4 +14,9 @@ while msg != "exit":
     msg = input(">>> ")
     clientSocket.sendto(msg.encode(), server)
     server_response = clientSocket.recvfrom(bufferSize)
-    print(server_response[0].decode())
+    if server_response[0].decode() != "SELECT":
+        print(server_response[0].decode())
+    else:
+        f = open("databases/select.txt", "r")
+        print(f.read())
+        f.close()
