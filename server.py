@@ -442,7 +442,6 @@ def delete(statement):
                                 attribute_list.append(st.split('=')[0])
                                 value_list.append(st.split('=')[1])
                                 value_index.append(attPos)
-                        # print(value_index)
                         cantdelete = 0
                         tables = data["databases"][used_database]["tables"]
                         for auxTable in tables:
@@ -555,7 +554,6 @@ def delete(statement):
                                 ok = 1
                                 td_values = td.decode().split(":")[2] + "#" + r.get(td).decode()
                                 td_values = td_values.split("#")
-                                # print(td_values)
                                 for i in range(len(value_list)):
                                     if value_list[i] != td_values[value_index[i]]:
                                         ok = 0
@@ -590,9 +588,13 @@ def select(statement):
                         values.append(key.decode().split(':')[2])
                         values += r.get(key).decode().split('#')
                         t.add_row(values)
-                    serverSocket.sendto(t.get_string().encode(), address)
+                    sFile = open("databases/select.txt", 'w')
+                    sFile.write(t.get_string())
+                    sFile.close()
+                    serverSocket.sendto("SELECT".encode(), address)
                 if len(statement) > 3:
                     attributes = []
+                    selection = []
                     select_type = statement[0].lower()
                     table = statement[2]
                     for str in data["databases"][used_database]["tables"][table]["structure"]:
@@ -602,37 +604,59 @@ def select(statement):
                     if "and" in statement:
                         statement.pop(1)
                     index = data["databases"][used_database]["tables"][table]["indexFiles"]
-                    ok = 0
-                    indexFile = ''
+                    arg_attributes = []
+                    arg_values = []
+                    indexes = []
+                    for s in statement:
+                        arg_attributes.append(s.split("=")[0])
+                        arg_values.append(s.split("=")[1])
                     for inx in index:
-                        if len(statement) == len(inx['indexAttributes']):
-                            for s in statement:
-                                for ind in inx['indexAttributes']:
-                                    if s.split("=")[0] == ind["attributeName"]:
-                                        ok += 1
-                        if ok == len(statement):
-                            indexFile = inx["indexName"] + '.kv'
-                            break
-                    if ok == len(statement):
-                        search_key = ""
-                        for s in statement:
-                            search_key += s.split('=')[1] + ":"
-                        search_key = search_key[:-1]
-                        copy = []
-                        with open("databases/" + used_database + "/tables/" + table + '/' + indexFile, 'r') as iFile:
-                            for line in iFile:
-                                if line.startswith("key: " + search_key):
-                                    pK = next(iFile, '').strip().split()[1]
-                                    key = used_database + ":" + table + ":" + pK
-                                    values = [pK]
-                                    value = r.get(key).decode().split('#')
-                                    values += value
-                                    if select_type == "distinct":
-                                        if value not in copy:
-                                            copy.append(value)
-                                            t.add_row(values)
-                                    else:
-                                        t.add_row(values)
+                        l = []
+                        for ind in inx['indexAttributes']:
+                            l.append(ind["attributeName"])
+                        indexes.append(l)
+                    for i in indexes:
+                        if set(i).issubset(set(arg_attributes)):
+                            statement_values = ""
+                            for at in i:
+                                x = arg_attributes.index(at)
+                                statement_values += arg_values[x] + ":"
+                            statement_values = statement_values[:-1]
+                            i_key = r.keys("*:" + used_database + ":" + table + ":" + statement_values)[0].decode()
+                            i_values = r.get(i_key).decode().split("#")
+                            for val in i_values:
+                                l = []
+                                obj = r.get(used_database + ":" + table + ":" + val).decode().split("#")
+                                l.append(val)
+                                for o in obj:
+                                    l.append(o)
+                                selection.append(l)
+                            arg_attributes = list(set(arg_attributes) - set(i))
+                    print(arg_attributes)
+                    if len(arg_attributes) > 0:
+                        print(selection)
+                        if selection == []:
+                            keys = r.keys(used_database + ":" + table + ":*")
+                            for k in keys:
+                                l = []
+                                l.append(k.decode().split(":")[-1])
+                                obj = r.get(k.decode()).decode().split("#")
+                                for o in obj:
+                                    l.append(o)
+                                selection.append(l)
+                        for arg in arg_attributes:
+                            ind = attributes.index(arg)
+                            val = arg_values[arg_attributes.index(arg)]
+                            selection = filter(lambda item: item[ind] == val, selection)
+                    copy = []
+                    if select_type == "distinct":
+                        for s in selection:
+                            if r.get(used_database + ":" + table + ":" + s[0]).decode() not in copy:
+                                copy.append(r.get(used_database + ":" + table + ":" + s[0]).decode())
+                                t.add_row(s)
+                    else:
+                        for s in selection:
+                            t.add_row(s)
                     sFile = open("databases/select.txt", 'w')
                     sFile.write(t.get_string())
                     sFile.close()
@@ -648,7 +672,7 @@ def select(statement):
 def generate():
     companie = ["BlueAir", "FlyEmirates", "Wizz", "TurkishAirlines"]
     plecare = ['Spania', 'Anglia', 'Germania', 'Franta', 'Olanda', 'Portugalia', 'Italia']
-    destinatie = ['SUA', "Canada", 'Japonia', 'Mexic', "Egipt", 'Inonezia', 'Columbia']
+    destinatie = ['SUA', "Canada", 'Japonia', 'Mexic', "Egipt", 'Indonezia', 'Columbia']
     for i in range(10000):
         com = random.choice(companie)
         plec = random.choice(plecare)
@@ -675,7 +699,6 @@ def generate():
             r.set(skey2, ivalue)
         else:
             r.set(skey2, k)
-        print(k)
     load_index("i1Index:d2:Zboruri:*", "databases/d2/tables/Zboruri/i1Index.kv")
     load_index("i2Index:d2:Zboruri:*", "databases/d2/tables/Zboruri/i2Index.kv")
     serverSocket.sendto("Generated 1 million values for Zboruri".encode(), address)
