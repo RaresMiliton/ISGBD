@@ -328,12 +328,15 @@ def insert(statement):
                                                     "refTable"]).encode(), address)
                                             no = 1
                                 if no != 1:
-                                    f = open(
-                                        "databases/" + used_database + "/tables/" + table_name + "/" + "foreignKey" + ".kv",
-                                        "w+")
-                                    f.write("key: " + fKey.split(':')[-1] + '\n')
-                                    f.write("value: " + fk["refTable"] + '\n')
-                                    f.close()
+                                    f_key = "foreignKey:" + str(used_database) + ":" + str(table_name) + ":" + str(fKey.split(':')[-1])
+                                    search_fkey = r.keys(f_key)
+                                    if len(search_fkey) > 0:
+                                        fvalue = r.get(f_key).decode()
+                                        fvalue += "#" + key.split(':')[-1]
+                                        r.set(f_key, fvalue)
+                                    else:
+                                        r.set(f_key, key.split(':')[-1])
+                                    load_index("foreignKey:" + str(used_database) + ":" + str(table_name) + ":*", "databases/" + used_database + "/tables/" + table_name + "/" + "foreignKey" + ".kv")
                         if len(data["databases"][used_database]["tables"][table_name]["uniqueKeys"]) > 1:
                             uk = data["databases"][used_database]["tables"][table_name]["uniqueKeys"][1]
                             if len(uk) > 0:
@@ -444,55 +447,25 @@ def delete(statement):
                                 value_index.append(attPos)
                         cantdelete = 0
                         tables = data["databases"][used_database]["tables"]
+                        ftable = ""
                         for auxTable in tables:
                             foreignKeys = data["databases"][used_database]["tables"][auxTable]["foreignKeys"]
                             for fk in foreignKeys:
                                 if fk["refTable"] == table_name:
-                                    f = open(
-                                        "databases/" + used_database + "/tables/" + auxTable + "/" + "foreignKey" + ".kv",
-                                        "r+")
-                                    lines = f.readlines()
+                                    ftable = auxTable
                                     valueOfAttribute = ''
                                     for i in range(len(attribute_list)):
                                         if attribute_list[i] == fk["refAttribute"]:
                                             valueOfAttribute = value_list[i]
                                             break
                                     print(valueOfAttribute)
-                                    if valueOfAttribute == '':
-                                        rows = []
-                                        for key in r.keys(used_database + ':' + table_name + ':*'):
-                                            values = []
-                                            values.append(key.decode().split(':')[2])
-                                            values += r.get(key).decode().split('#')
-                                            rows.append(values)
-                                        k = 0
-                                        pks = []
-                                        for row in rows:
-                                            if k == len(rows) - 1:
-                                                break
-                                            if value_list[k] == row[value_index[k]]:
-                                                pks.append(row[findAttribute(foreignKeys[0]["refAttribute"],
-                                                                             data["databases"][used_database]["tables"][
-                                                                                 table_name]["structure"])])
-                                                k += 1
-                                        for p in pks:
-                                            for j in range(len(lines)):
-                                                if lines[j].split(' ')[1][:-1] == table_name:
-                                                    if lines[j - 1].split(' ')[1][:-1] == p:
-                                                        serverSocket.sendto(
-                                                            "CAN'T DELETE ROW FROM TABLE {} - foreign key constraint".format(
-                                                                table_name).encode(), address)
-                                                        cantdelete = 1
-                                                        break
-                                    else:
-                                        for j in range(len(lines)):
-                                            if lines[j].split(' ')[1][:-1] == table_name:
-                                                if lines[j - 1].split(' ')[1][:-1] == valueOfAttribute:
-                                                    serverSocket.sendto(
-                                                        "CAN'T DELETE ROW FROM TABLE {} - foreign key constraint".format(
-                                                            table_name).encode(), address)
-                                                    cantdelete = 1
-                                    f.close()
+                                    fkey = "foreignKey:" + used_database + ":" + auxTable + ":" + valueOfAttribute
+                                    print(fkey)
+                                    if len(r.keys(fkey)) > 0:
+                                        serverSocket.sendto(
+                                            "CAN'T DELETE ROW FROM TABLE {} - foreign key constraint".format(
+                                                table_name).encode(), address)
+                                        cantdelete = 1
                         if cantdelete != 1:
                             uniqueKeys = data["databases"][used_database]["tables"][table_name]["uniqueKeys"]
                             for pos in range(len(attribute_list)):
@@ -516,40 +489,7 @@ def delete(statement):
                                         f.write(final)
                                         f.close()
                             foreignKeys = data["databases"][used_database]["tables"][table_name]["foreignKeys"]
-                            if len(foreignKeys) > 0:
-                                rows = []
-                                for key in r.keys(used_database + ':' + table_name + ':*'):
-                                    values = []
-                                    values.append(key.decode().split(':')[2])
-                                    values += r.get(key).decode().split('#')
-                                    rows.append(values)
-                                fks = []
-                                for row in rows:
-                                    for v in range(len(value_list)):
-                                        if value_list[v] == row[value_index[v]]:
-                                            fks.append(row[findAttribute(foreignKeys[0]["foreignKey"],
-                                                                         data["databases"][used_database]["tables"][
-                                                                             table_name]["structure"])])
-                                print(fks)
-                                f = open(
-                                    "databases/" + used_database + "/tables/" + table_name + "/" + "foreignKey" + ".kv",
-                                    "r")
-                                lines = f.readlines()
-                                for fk in fks:
-                                    for l in range(len(lines)):
-                                        if fk == lines[l].split(' ')[-1][:-1] and lines[l].split(' ')[0] == "key:":
-                                            if l != 0:
-                                                lines = lines[:l] + lines[l + 2:]
-                                            else:
-                                                lines = lines[l + 2:]
-                                            print(lines)
-                                            break
-                                f.close()
-                                f = open(
-                                    "databases/" + used_database + "/tables/" + table_name + "/" + "foreignKey" + ".kv",
-                                    "w")
-                                f.writelines(lines)
-                                f.close()
+                            print(foreignKeys)
                             for td in table_data:
                                 ok = 1
                                 td_values = td.decode().split(":")[2] + "#" + r.get(td).decode()
@@ -559,6 +499,22 @@ def delete(statement):
                                         ok = 0
                                 if ok == 1:
                                     r.delete(td.decode())
+                                    print(len(foreignKeys))
+                                    if len(foreignKeys) > 0:
+                                        f_key = r.keys("foreignKey:" + used_database + ":" + table_name + ":*")
+                                        if len(f_key) > 0:
+                                            val = r.get(f_key[0].decode()).decode().split("#")
+                                            val.remove(td.decode().split(":")[-1])
+                                            newval = ""
+                                            for v in val:
+                                                newval += v + "#"
+                                            newval = newval[:-1]
+                                            if newval != "":
+                                                r.set(f_key[0].decode(), newval)
+                                                load_index(f_key[0].decode(), "databases/" + used_database + "/tables/" + table_name + "/foreignKey.kv")
+                                            else:
+                                                os.remove("databases/" + used_database + "/tables/" + table_name + "/foreignKey.kv")
+                                                r.delete(f_key[0].decode())
                             serverSocket.sendto("DATA DELETED FROM TABLE {}".format(table_name).encode(), address)
 
             else:

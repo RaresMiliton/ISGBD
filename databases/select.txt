@@ -1,32 +1,5 @@
-+------+-----------------+----------+------------+
-| cod  |     companie    | plecare  | destinatie |
-+------+-----------------+----------+------------+
-| 4541 |   FlyEmirates   | Germania |  Columbia  |
-| 9676 | TurkishAirlines | Germania |   Egipt    |
-| 2022 |     BlueAir     | Germania |  Inonezia  |
-| 4344 | TurkishAirlines | Germania |   Canada   |
-| 2751 |   FlyEmirates   | Germania |   Mexic    |
-| 2297 |     BlueAir     | Germania |  Japonia   |
-| 5209 | TurkishAirlines | Germania |  Columbia  |
-| 7646 |   FlyEmirates   | Germania |    SUA     |
-| 7529 |       Wizz      | Germania |    SUA     |
-| 4710 |     BlueAir     | Germania |    SUA     |
-| 1978 |       Wizz      | Germania |  Columbia  |
-| 9476 |       Wizz      | Germania |  Inonezia  |
-| 1576 |     BlueAir     | Germania |   Egipt    |
-| 8589 |     BlueAir     | Germania |  Columbia  |
-| 690  | TurkishAirlines | Germania |   Mexic    |
-| 8686 |     BlueAir     | Germania |   Mexic    |
-| 6117 |     BlueAir     | Germania |   Canada   |
-| 620  |   FlyEmirates   | Germania |  Japonia   |
-| 8582 |       Wizz      | Germania |   Egipt    |
-| 5256 |       Wizz      | Germania |   Canada   |
-| 3871 |       Wizz      | Germania |   Mexic    |
-| 4783 | TurkishAirlines | Germania |    SUA     |
-| 9346 | TurkishAirlines | Germania |  Japonia   |
-| 3413 |       Wizz      | Germania |  Japonia   |
-| 1367 |   FlyEmirates   | Germania |   Canada   |
-| 2713 | TurkishAirlines | Germania |  Inonezia  |
-| 9906 |   FlyEmirates   | Germania |   Egipt    |
-| 4257 |   FlyEmirates   | Germania |  Inonezia  |
-+------+-----------------+----------+------------+
++---------+----------------+----------+
+| GroupID | Specialization | Language |
++---------+----------------+----------+
+|   100   |       a        |    b     |
++---------+----------------+----------+
