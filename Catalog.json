@@ -87,7 +87,19 @@
                             "attributeName": "StudID"
                         }
                     ],
-                    "indexFiles": []
+                    "indexFiles": [
+                        {
+                            "indexName": "ind1Index",
+                            "keyLength": 4,
+                            "isUnique": "1",
+                            "indexType": "BTree",
+                            "indexAttributes": [
+                                {
+                                    "attributeName": "Nume"
+                                }
+                            ]
+                        }
+                    ]
                 },
                 "t1": {
                     "tableName": "t1",

@@ -352,11 +352,12 @@ def insert(statement):
                                         f.seek(0)
                                         lines = f.readlines()
                                         for j in range(len(lines)):
-                                            if lines[j].split(' ')[1][:-1] == attributes[i]:
-                                                serverSocket.sendto("UNIQUE KEY CONSTRAINT VIOLATED IN TABLE {}".format(
-                                                    table_name).encode(), address)
-                                                ok = 1
-                                                break
+                                            if len(lines[j].split(' ')) > 1:
+                                                if lines[j].split(' ')[1][:-1] == attributes[i]:
+                                                    serverSocket.sendto("UNIQUE KEY CONSTRAINT VIOLATED IN TABLE {}".format(
+                                                        table_name).encode(), address)
+                                                    ok = 1
+                                                    break
                                         if ok == 0:
                                             uKey += attributes[i]
                                         f.close()
