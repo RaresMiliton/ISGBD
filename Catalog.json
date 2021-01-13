@@ -208,6 +208,61 @@
                             ]
                         }
                     ]
+                },
+                "Employee": {
+                    "tableName": "Employee",
+                    "fileName": "Employee.bin",
+                    "rowLength": 4,
+                    "structure": [
+                        {
+                            "attributeName": "ID",
+                            "type": "int",
+                            "length": "4",
+                            "isNull": "0"
+                        },
+                        {
+                            "attributeName": "Name",
+                            "type": "varchar",
+                            "length": "30",
+                            "isNull": "1"
+                        },
+                        {
+                            "attributeName": "Country",
+                            "type": "varchar",
+                            "length": "30",
+                            "isNull": "1"
+                        },
+                        {
+                            "attributeName": "Wage",
+                            "type": "float",
+                            "length": "4",
+                            "isNull": "1"
+                        }
+                    ],
+                    "primaryKey": [
+                        {
+                            "attributeName": "ID"
+                        }
+                    ],
+                    "foreignKeys": [],
+                    "uniqueKeys": [
+                        {
+                            "attributeName": "ID"
+                        }
+                    ],
+                    "indexFiles": [
+                        {
+                            "indexName": "ind1Index",
+                            "keyLength": 4,
+                            "isUnique": "1",
+                            "indexType": "BTree",
+                            "indexAttributes": [
+                                {
+                                    "attributeName": "Country"
+                                }
+                            ]
+                        }
+                    ]
                 }
             }
         }

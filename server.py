@@ -5,6 +5,7 @@ from prettytable import PrettyTable
 import os
 import shutil
 import random
+import string
 
 ip_address = "127.0.0.1"
 port = 9999
@@ -59,7 +60,11 @@ def compareType(attribute, value, length):
         except:
             return False
     elif value == "float":
-        return isinstance(attribute, float)
+        try:
+            float(attribute)
+            return True
+        except:
+            return False
     elif value in ["varchar", "char"]:
         if not isinstance(attribute, str):
             return False
@@ -298,6 +303,8 @@ def insert(statement):
                         if attributes[i][0] == " ":
                             attributes[i] = attributes[i][1:]
                         if not compareType(attributes[i], st[i]["type"], st[i]["length"]):
+                            print(st[i]["type"])
+                            print(attributes[i])
                             serverSocket.sendto("ATTRIBUTE TYPES DO NOT MATCH!".encode(), address)
                             break
                         else:
@@ -368,7 +375,7 @@ def insert(statement):
                                     f.write("key: " + uKey + '\n')
                                     f.write("value: " + key.split(':')[-1] + '\n')
                                     f.close()
-                        if len(data["databases"][used_database]["tables"][table_name]["indexFiles"]) > 1:
+                        if len(data["databases"][used_database]["tables"][table_name]["indexFiles"]) > 0:
                             index = data["databases"][used_database]["tables"][table_name]["indexFiles"]
                             for inx in index:
                                 iKey = inx["indexName"] + ":" + used_database + ":" + table_name + ":"
@@ -529,95 +536,187 @@ def delete(statement):
 def select(statement):
     data = open_file()
     global used_database
-    if ((statement[0].lower() != "*") and (statement[0].lower() != "distinct")) or (statement[1].lower() != "from"):
+    if "from" not in " ".join(statement).lower():
         serverSocket.sendto("INVALID SELECT COMMAND".encode(), address)
     else:
         if used_database:
-            table = data["databases"][used_database]["tables"].get(statement[2], None)
+            search_table = " ".join(statement)
+            table_s = search_table[search_table.index("FROM")+5:].split(" ")[0]
+            table = data["databases"][used_database]["tables"].get(table_s, None)
             if table:
-                if len(statement) == 3:
-                    attributes = []
-                    for str in data["databases"][used_database]["tables"][statement[2]]["structure"]:
-                        attributes.append(str["attributeName"])
-                    t = PrettyTable(attributes)
-                    for key in r.keys(used_database + ':' + statement[2] + ':*'):
-                        values = []
-                        values.append(key.decode().split(':')[2])
-                        values += r.get(key).decode().split('#')
-                        t.add_row(values)
-                    sFile = open("databases/select.txt", 'w')
-                    sFile.write(t.get_string())
-                    sFile.close()
-                    serverSocket.sendto("SELECT".encode(), address)
-                if len(statement) > 3:
-                    attributes = []
-                    selection = []
-                    select_type = statement[0].lower()
-                    table = statement[2]
-                    for str in data["databases"][used_database]["tables"][table]["structure"]:
-                        attributes.append(str["attributeName"])
-                    t = PrettyTable(attributes)
-                    statement = statement[4:]
-                    if "and" in statement:
-                        statement.pop(1)
-                    index = data["databases"][used_database]["tables"][table]["indexFiles"]
-                    arg_attributes = []
-                    arg_values = []
-                    indexes = []
-                    for s in statement:
-                        arg_attributes.append(s.split("=")[0])
-                        arg_values.append(s.split("=")[1])
-                    for inx in index:
+                st_copy = " ".join(statement)
+                if "group by" in st_copy.lower():
+                    grouped = st_copy[st_copy.index("GROUP BY")+len("GROUP BY "):]
+                    columns = st_copy[:st_copy.index("FROM") - 1]
+                    columns = columns.split(",")
+                    columns = "".join(columns).split(" ")
+                    t = PrettyTable(columns)
+                    ok = 0
+                    index = data["databases"][used_database]["tables"][table_s]["indexFiles"]
+                    indexName = ""
+                    for ind in index:
+                        iN = ind['indexName']
+                        for i in ind['indexAttributes']:
+                            if grouped in i["attributeName"]:
+                                ok = 1
+                                indexName = iN
+                    if ok == 1:
                         l = []
-                        for ind in inx['indexAttributes']:
-                            l.append(ind["attributeName"])
-                        indexes.append(l)
-                    for i in indexes:
-                        if set(i).issubset(set(arg_attributes)):
-                            statement_values = ""
-                            for at in i:
-                                x = arg_attributes.index(at)
-                                statement_values += arg_values[x] + ":"
-                            statement_values = statement_values[:-1]
-                            i_key = r.keys("*:" + used_database + ":" + table + ":" + statement_values)[0].decode()
-                            i_values = r.get(i_key).decode().split("#")
-                            for val in i_values:
-                                l = []
-                                obj = r.get(used_database + ":" + table + ":" + val).decode().split("#")
-                                l.append(val)
-                                for o in obj:
-                                    l.append(o)
-                                selection.append(l)
-                            arg_attributes = list(set(arg_attributes) - set(i))
-                    print(arg_attributes)
-                    if len(arg_attributes) > 0:
-                        print(selection)
-                        if selection == []:
-                            keys = r.keys(used_database + ":" + table + ":*")
-                            for k in keys:
-                                l = []
-                                l.append(k.decode().split(":")[-1])
-                                obj = r.get(k.decode()).decode().split("#")
-                                for o in obj:
-                                    l.append(o)
-                                selection.append(l)
-                        for arg in arg_attributes:
-                            ind = attributes.index(arg)
-                            val = arg_values[arg_attributes.index(arg)]
-                            selection = filter(lambda item: item[ind] == val, selection)
-                    copy = []
-                    if select_type == "distinct":
-                        for s in selection:
-                            if r.get(used_database + ":" + table + ":" + s[0]).decode() not in copy:
-                                copy.append(r.get(used_database + ":" + table + ":" + s[0]).decode())
+                        for i in range(len(columns)):
+                            l.append(" ")
+                        i_gr = columns.index(grouped)
+                        iKeys = r.keys(indexName + ":" + used_database + ":" + table_s + "*")
+                        for k in iKeys:
+                            l[i_gr] = k.decode().split(":")[-1]
+                            counter = 0
+                            for c in columns:
+                                if counter == i_gr:
+                                    counter += 1
+                                if "count(" in c.lower():
+                                    l[counter] = len(r.get(k).decode().split("#"))
+                                if "sum(" in c.lower():
+                                    suma = 0
+                                    cName = c[c.index("(")+1:c.index(")")]
+                                    coun = -1
+                                    for s in data["databases"][used_database]["tables"][table_s]["structure"]:
+                                        if s["attributeName"] == cName:
+                                            break
+                                        coun += 1
+                                    objects = r.get(k).decode().split("#")
+                                    print(objects)
+                                    for ob in objects:
+                                        key = used_database + ":" + table_s + ":" + ob
+                                        suma += float(r.get(key).decode().split("#")[2])
+                                    l[counter] = round(suma, 2)
+                                if "avg(" in c.lower():
+                                    suma = 0
+                                    cName = c[c.index("(")+1:c.index(")")]
+                                    coun = -1
+                                    for s in data["databases"][used_database]["tables"][table_s]["structure"]:
+                                        if s["attributeName"] == cName:
+                                            break
+                                        coun += 1
+                                    objects = r.get(k).decode().split("#")
+                                    for ob in objects:
+                                        key = used_database + ":" + table_s + ":" + ob
+                                        suma += float(r.get(key).decode().split("#")[2])
+                                    l[counter] = round(round(suma, 2)/len(objects), 2)
+                                if "min(" in c.lower():
+                                    cName = c[c.index("(")+1:c.index(")")]
+                                    coun = -1
+                                    for s in data["databases"][used_database]["tables"][table_s]["structure"]:
+                                        if s["attributeName"] == cName:
+                                            break
+                                        coun += 1
+                                    objects = r.get(k).decode().split("#")
+                                    values = []
+                                    for ob in objects:
+                                        key = used_database + ":" + table_s + ":" + ob
+                                        values.append(float(r.get(key).decode().split("#")[2]))
+                                    l[counter] = min(values)
+                                if "max(" in c.lower():
+                                    cName = c[c.index("(") + 1:c.index(")")]
+                                    coun = -1
+                                    for s in data["databases"][used_database]["tables"][table_s]["structure"]:
+                                        if s["attributeName"] == cName:
+                                            break
+                                        coun += 1
+                                    objects = r.get(k).decode().split("#")
+                                    values = []
+                                    for ob in objects:
+                                        key = used_database + ":" + table_s + ":" + ob
+                                        values.append(float(r.get(key).decode().split("#")[2]))
+                                    l[counter] = max(values)
+                                counter += 1
+                            t.add_row(l)
+                        sFile = open("databases/select.txt", 'w')
+                        sFile.write(t.get_string())
+                        sFile.close()
+                        serverSocket.sendto("SELECT".encode(), address)
+                else:
+                    if len(statement) == 3:
+                        attributes = []
+                        for str in data["databases"][used_database]["tables"][statement[2]]["structure"]:
+                            attributes.append(str["attributeName"])
+                        t = PrettyTable(attributes)
+                        for key in r.keys(used_database + ':' + statement[2] + ':*'):
+                            values = []
+                            values.append(key.decode().split(':')[2])
+                            values += r.get(key).decode().split('#')
+                            t.add_row(values)
+                        sFile = open("databases/select.txt", 'w')
+                        sFile.write(t.get_string())
+                        sFile.close()
+                        serverSocket.sendto("SELECT".encode(), address)
+                    if len(statement) > 3:
+                        attributes = []
+                        selection = []
+                        select_type = statement[0].lower()
+                        table = statement[2]
+                        for str in data["databases"][used_database]["tables"][table]["structure"]:
+                            attributes.append(str["attributeName"])
+                        t = PrettyTable(attributes)
+                        statement = statement[4:]
+                        if "and" in statement:
+                            statement.pop(1)
+                        index = data["databases"][used_database]["tables"][table]["indexFiles"]
+                        arg_attributes = []
+                        arg_values = []
+                        indexes = []
+                        for s in statement:
+                            arg_attributes.append(s.split("=")[0])
+                            arg_values.append(s.split("=")[1])
+                        for inx in index:
+                            l = []
+                            for ind in inx['indexAttributes']:
+                                l.append(ind["attributeName"])
+                            indexes.append(l)
+                        for i in indexes:
+                            if set(i).issubset(set(arg_attributes)):
+                                statement_values = ""
+                                for at in i:
+                                    x = arg_attributes.index(at)
+                                    statement_values += arg_values[x] + ":"
+                                statement_values = statement_values[:-1]
+                                i_key = r.keys("*:" + used_database + ":" + table + ":" + statement_values)[0].decode()
+                                i_values = r.get(i_key).decode().split("#")
+                                for val in i_values:
+                                    l = []
+                                    obj = r.get(used_database + ":" + table + ":" + val).decode().split("#")
+                                    l.append(val)
+                                    for o in obj:
+                                        l.append(o)
+                                    selection.append(l)
+                                arg_attributes = list(set(arg_attributes) - set(i))
+                        print(arg_attributes)
+                        if len(arg_attributes) > 0:
+                            print(selection)
+                            if selection == []:
+                                keys = r.keys(used_database + ":" + table + ":*")
+                                for k in keys:
+                                    l = []
+                                    l.append(k.decode().split(":")[-1])
+                                    obj = r.get(k.decode()).decode().split("#")
+                                    for o in obj:
+                                        l.append(o)
+                                    selection.append(l)
+                            for arg in arg_attributes:
+                                ind = attributes.index(arg)
+                                val = arg_values[arg_attributes.index(arg)]
+                                selection = filter(lambda item: item[ind] == val, selection)
+                        copy = []
+                        if select_type == "distinct":
+                            for s in selection:
+                                if r.get(used_database + ":" + table + ":" + s[0]).decode() not in copy:
+                                    copy.append(r.get(used_database + ":" + table + ":" + s[0]).decode())
+                                    t.add_row(s)
+                        else:
+                            for s in selection:
                                 t.add_row(s)
-                    else:
-                        for s in selection:
-                            t.add_row(s)
-                    sFile = open("databases/select.txt", 'w')
-                    sFile.write(t.get_string())
-                    sFile.close()
-                    serverSocket.sendto("SELECT".encode(), address)
+                        sFile = open("databases/select.txt", 'w')
+                        sFile.write(t.get_string())
+                        sFile.close()
+                        serverSocket.sendto("SELECT".encode(), address)
             else:
                 msg = "TABLE DOES NOT EXIST"
                 serverSocket.sendto(msg.encode(), address)
@@ -661,6 +760,34 @@ def generate():
     serverSocket.sendto("Generated 1 million values for Zboruri".encode(), address)
 
 
+def get_random_string(length):
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for _ in range(length))
+
+
+def generate2():
+    country = ['Spania', 'Anglia', 'Germania', 'Franta', 'Olanda', 'Portugalia', 'Italia', 'SUA', "Canada", 'Japonia', 'Mexic', "Egipt", 'Indonezia', 'Columbia']
+    for i in range(1000):
+        coun = random.choice(country)
+        name = get_random_string(16)
+        wage = round(random.uniform(1000, 85000), 2)
+        k = str(i + 1)
+        key = "d2:Employee:" + k
+        value = name + '#' + coun + '#' + str(wage)
+        r.set(key, value)
+        skey1 = "ind1Index:d2:Employee:" + coun
+
+        search_ikey = r.keys(skey1)
+        if len(search_ikey) > 0:
+            ivalue = r.get(skey1).decode()
+            ivalue += "#" + k
+            r.set(skey1, ivalue)
+        else:
+            r.set(skey1, k)
+    load_index("ind1Index:d2:Employee:*", "databases/d2/tables/Employee/ind1Index.kv")
+    serverSocket.sendto("Generated 1 million values for Employee".encode(), address)
+
+
 print("Server Up")
 
 while True:
@@ -676,5 +803,7 @@ while True:
         serverSocket.sendto("BYE!".encode(), address)
     elif clientData[0].lower() == "generate":
         generate()
+    elif clientData[0].lower() == "generate2":
+        generate2()
     else:
         serverSocket.sendto("INVALID COMMAND".encode(), address)
